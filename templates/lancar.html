@@ -1,0 +1,378 @@
+{% extends "base.html" %}
+{% block title %}Lançamento Manual{% endblock %}
+
+{% block content %}
+<div class="container my-4">
+
+  <!-- 🔔 Alertas Inteligentes -->
+  {% if alertas %}
+    <div class="mb-4">
+      {% for alerta in alertas %}
+        <div class="alert alert-{{ alerta.tipo }} d-flex justify-content-between align-items-center fade show">
+          {{ alerta.icone }} {{ alerta.mensagem }}
+          <button class="btn btn-sm btn-outline-{{ alerta.tipo }}">{{ alerta.acao }}</button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <!-- 💡 Dica de Aplicação Inteligente -->
+  {% if dica_aplicacao %}
+    <div class="alert alert-info d-flex justify-content-between align-items-center fade show">
+      💡 {{ dica_aplicacao }}
+      <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#modalSimulador">
+  Simular aplicação
+</button>
+
+    </div>
+  {% endif %}
+
+  {% if previsao_gastos %}
+  <div class="alert alert-info mt-3">
+    📊 Estimativa de gastos até o fim do mês: <strong>R$ {{ previsao_gastos }}</strong>
+  </div>
+  {% endif %}
+<!-- 📊 Painel de Resumo Financeiro -->
+<div class="card shadow-sm mb-4">
+  <div class="card-body">
+    <h4 class="h5 mb-3">📊 Resumo do Mês</h4>
+
+    <!-- Cards de receitas, despesas e saldo -->
+    <div class="row g-4 mb-4">
+      <div class="col-md-4">
+        <div class="bg-light p-3 rounded">
+          <strong>Receitas:</strong> R$ {{ resumo.receitas }}
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="bg-light p-3 rounded">
+          <strong>Despesas:</strong> R$ {{ resumo.despesas }}
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="bg-light p-3 rounded">
+          <strong>Saldo:</strong> R$ {{ resumo.saldo }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cards de saldo ajustado -->
+   
+
+      <<div class="row g-4">
+  <!-- Saldo Disponível -->
+  <div class="col-md-4">
+    <div class="card h-100 border-success shadow-sm">
+      <div class="card-body d-flex flex-column justify-content-between">
+        <h5 class="card-title text-success">
+          <i class="bi bi-wallet2 me-2"></i>Saldo Disponível
+        </h5>
+        <p class="fs-4 mb-0">R$ {{ "%.2f"|format(resumo.saldo) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parcelas Futuras -->
+  <div class="col-md-4">
+    <div class="card h-100 border-warning shadow-sm">
+      <div class="card-body d-flex flex-column justify-content-between">
+        <h5 class="card-title text-warning">
+          <i class="bi bi-credit-card me-2"></i>Parcelas Futuras
+        </h5>
+        <p class="fs-4 mb-0">R$ {{ "%.2f"|format(resumo.parcelas_futuras) }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Saldo Ajustado -->
+  <div class="col-md-4">
+    <div class="card h-100 border-primary shadow-sm">
+      <div class="card-body d-flex flex-column justify-content-between">
+        <h5 class="card-title text-primary">
+          <i class="bi bi-calculator me-2"></i>Saldo Ajustado
+        </h5>
+        <p class="fs-4 mb-0 {% if resumo.saldo_ajustado < 0 %}text-danger{% endif %}">
+          R$ {{ "%.2f"|format(resumo.saldo_ajustado) }}
+        </p>
+        {% if resumo.saldo_ajustado < 0 %}
+        <small class="text-danger mt-2">
+          <i class="bi bi-exclamation-triangle me-1"></i>Saldo comprometido por parcelas futuras.
+        </small>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+
+      <div class="mt-4">
+        <canvas id="graficoCategorias" height="150"></canvas>
+      </div>
+      <div class="mt-4">
+        <canvas id="graficoEvolucao" height="150"></canvas>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- 📝 Formulário de Lançamento -->
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form action="{{ url_for('lancar') }}" method="post" novalidate>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label for="competencia" class="form-label">Competência</label>
+            <input type="month" class="form-control" id="competencia" name="competencia" required>
+            <div class="form-text">Exemplo: 2025-09</div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="data" class="form-label">Data</label>
+            <input type="date" class="form-control" id="data" name="data" required>
+            <div class="form-text">Formato: dd/mm/aaaa</div>
+          </div>
+
+          <div class="col-md-4">
+            <label for="valor" class="form-label">Valor</label>
+            <div class="input-group">
+              <span class="input-group-text">R$</span>
+              <input type="number" class="form-control" id="valor" name="valor" step="0.01" min="0" required>
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <label for="descricao" class="form-label">Descrição</label>
+            <input type="text" class="form-control" id="descricao" name="descricao" maxlength="200" required>
+          </div>
+
+          <div class="col-lg-6">
+            <label for="estabelecimento" class="form-label">Estabelecimento</label>
+            <input type="text" class="form-control" id="estabelecimento" name="estabelecimento" maxlength="200">
+          </div>
+
+          <div class="col-md-6">
+            <label for="tipo" class="form-label">Tipo</label>
+            <select class="form-select" id="tipo" name="tipo" required>
+              <option value="" selected disabled>Selecione</option>
+              <option value="Receita">Receita</option>
+              <option value="Despesa">Despesa</option>
+            </select>
+          </div>
+
+          <div class="col-md-6">
+            <label for="forma_pagamento" class="form-label">Forma de Pagamento</label>
+            <select class="form-select" id="forma_pagamento" name="forma_pagamento" required>
+              <option value="" selected disabled>Selecione</option>
+              <option value="Dinheiro">Dinheiro</option>
+              <option value="Crédito">Crédito</option>
+              <option value="Débito">Débito</option>
+              <option value="Pix">Pix</option>
+              <option value="Boleto">Boleto</option>
+              <option value="Transferência">Transferência</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 mt-4">
+          <button type="submit" class="btn btn-primary">💾 Salvar</button>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">↩️ Voltar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 📂 Importações -->
+  <div class="card shadow-sm mt-4">
+    <div class="card-body">
+      <h4 class="h5 mb-3">📂 Importações</h4>
+      <div class="row g-4">
+        <div class="col-lg-6">
+          <div class="card h-100 border-primary">
+            <div class="card-body">
+              <form action="{{ url_for('importar_extrato') }}" method="post" enctype="multipart/form-data">
+                <h5 class="card-title">📥 Extrato Bancário</h5>
+                <p class="card-text">Importe arquivos .csv ou .txt do seu banco.</p>
+                <input type="file" class="form-control mb-2" name="extrato" accept=".csv,.txt" required>
+                <button type="submit" class="btn btn-outline-primary w-100">Importar Extrato</button>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="card h-100 border-success">
+            <div class="card-body">
+              <form action="{{ url_for('importar_planilha') }}" method="post" enctype="multipart/form-data">
+                <h5 class="card-title">📊 Planilha Excel</h5>
+                <p class="card-text">Importe lançamentos em lote via .xlsx.</p>
+                <input type="file" class="form-control mb-2" name="planilha" accept=".xlsx" required>
+                <button type="submit" class="btn btn-outline-success w-100">Importar Planilha</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr class="my-4">
+      <div class="small text-muted">
+        💡 Dica: após importar, você poderá revisar e ajustar os lançamentos na tela de listagem.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 📈 Scripts para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  try {
+    const categorias = JSON.parse('{{ categorias_json | tojson | safe }}');
+    const evolucao = JSON.parse('{{ evolucao_json | tojson | safe }}');
+
+    const graficoCategorias = document.getElementById('graficoCategorias');
+    const graficoEvolucao = document.getElementById('graficoEvolucao');
+
+    if (graficoCategorias && categorias.labels && categorias.valores) {
+      new Chart(graficoCategorias, {
+        type: 'pie',
+        data: {
+          labels: categorias.labels,
+          datasets: [{
+            data: categorias.valores,
+            backgroundColor: ['#3498db', '#e74c3c', '#f1c40f', '#2ecc71', '#9b59b6']
+          }]
+        },
+        options: {
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Erro ao renderizar gráficos:', error);
+  }
+  </script>
+
+<!-- 💰 Modal Simulador de Aplicação -->
+<div>
+  <div class="modal fade" id="modalSimulador" tabindex="-1" aria-labelledby="modalSimuladorLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form id="formSimulador">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalSimuladorLabel">💰 Simulador de Aplicação</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="valorAplicado" class="form-label">Valor a aplicar</label>
+              <input type="number" class="form-control" id="valorAplicado" value="{{ resumo.saldo }}" min="0" step="0.01" required />
+            </div>
+            <div class="mb-3">
+              <label for="prazoMeses" class="form-label">Prazo (em meses)</label>
+              <input type="number" class="form-control" id="prazoMeses" value="6" min="1" required />
+            </div>
+            <div class="mb-3">
+              <label for="taxaJuros" class="form-label">Taxa de juros mensal (%)</label>
+              <input type="number" class="form-control" id="taxaJuros" value="1.1" step="0.01" required />
+              <div class="form-text">Exemplo: CDB ou Tesouro Selic rende cerca de 1.1% ao mês</div>
+            </div>
+            <div class="alert alert-success d-none" id="resultadoSimulador"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-primary">📈 Calcular rendimento</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById("formSimulador").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const valor = parseFloat(document.getElementById("valorAplicado").value);
+      const prazo = parseInt(document.getElementById("prazoMeses").value);
+      const taxa = parseFloat(document.getElementById("taxaJuros").value) / 100;
+
+      const montante = valor * Math.pow(1 + taxa, prazo);
+      const rendimento = montante - valor;
+
+      const resultado = document.getElementById("resultadoSimulador");
+      resultado.classList.remove("d-none");
+      resultado.innerHTML = `📊 Em ${prazo} meses, você terá <strong>R$ ${montante.toFixed(2).replace('.', ',')}</strong><br />` +
+        `💸 Rendimento estimado: <strong>R$ ${rendimento.toFixed(2).replace('.', ',')}</strong>`;
+    });
+  </script>
+</div>
+
+<!-- Modal Investimento -->
+<div class="modal fade" id="modalInvestimento" tabindex="-1" aria-labelledby="modalInvestimentoLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalInvestimentoLabel">💼 Opções de investimento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body" id="conteudoInvestimento">
+        <!-- Conteúdo será preenchido via JavaScript -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function carregarSugestaoAplicacao() {
+  fetch('/api/sugestao_aplicacao', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      "saldo_atual": "{{ resumo.saldo }}",
+      "meta": "10000",
+      "aporte_mensal": "500",
+      "perfil": "conservador",
+      "prazo_meses": "12"
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    const html = `
+      <p><strong>Opções sugeridas:</strong> ${data.opcoes.join(', ')}</p>
+      <p><strong>Alerta:</strong> ${data.alerta}</p>
+      <p><strong>Aporte ideal:</strong> R$ ${data.aporte_ideal.toFixed(2).replace('.', ',')}</p>
+    `;
+    document.getElementById('conteudoInvestimento').innerHTML = html;
+    const modal = new bootstrap.Modal(document.getElementById('modalInvestimento'));
+    modal.show();
+  })
+  .catch(error => {
+    console.error('Erro ao carregar sugestão:', error);
+  });
+}
+</script>
+<script>
+  async function atualizarSaldoDisponivel() {
+    const res = await fetch('/api/metrics-ajustado');
+    const data = await res.json();
+
+    const saldo = data.saldoReal ?? 0;
+    const el = document.getElementById("saldoDisponivel");
+    if (el) {
+      el.textContent = saldo.toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
+      });
+      el.classList.toggle('text-success', saldo >= 0);
+      el.classList.toggle('text-danger', saldo < 0);
+    }
+  }
+
+  atualizarSaldoDisponivel();
+</script>
+
+
+{% endblock %}

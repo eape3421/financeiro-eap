@@ -1,0 +1,433 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2 class="section-title">📊 Dashboard Financeiro</h2>
+  <p><strong>Dica de economia:</strong> {{ dica }}</p>
+  <!-- Filtro de competência -->
+  <div class="card p-3 mb-4">
+    <div class="row g-3 align-items-end">
+      <div class="col-md-4">
+        <label for="filtroCompetencia" class="form-label">Competência</label>
+        <select id="filtroCompetencia" class="form-select">
+          <option value="">Todas</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <button id="btnAplicar" class="btn btn-primary w-100">Aplicar</button>
+      </div>
+      <div class="col-md-2">
+        <button id="btnLimpar" class="btn btn-outline-secondary w-100">Limpar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- métricas -->
+<!-- métricas + alerta -->
+<div id="painelResumo" class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 h-100">
+      <div class="text-muted small">Receitas</div>
+      <div id="cardReceitas" class="fs-4 fw-bold">R$ 0,00</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100">
+      <div class="text-muted small">Despesas</div>
+      <div id="cardDespesas" class="fs-4 fw-bold">R$ 0,00</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100">
+      <div class="text-muted small">Saldo</div>
+      <div id="cardSaldo" class="fs-4 fw-bold text-success">R$ 0,00</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100">
+      <div class="d-flex justify-content-between align-items-center">
+        <div>
+          <div class="text-muted small">Meta mensal</div>
+          <div id="cardMeta" class="fw-semibold">R$ 0,00</div>
+        </div>
+        <div id="badgeMeta" class="badge bg-secondary">0%</div>
+      </div>
+      <div class="progress mt-2" style="height: 8px;">
+        <div id="barMeta" class="progress-bar" role="progressbar" style="width: 0%;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dica da IA -->
+{% if dica_ia %}
+  <div class="alert alert-info mt-4" role="alert">
+    💡 <strong>Dica da IA:</strong> {{ dica_ia }}
+  </div>
+{% endif %}
+
+
+  <!-- Gráficos -->
+  <div class="row g-4">
+    <div class="col-md-5">
+      <div class="card p-3 h-100">
+        <div class="fw-semibold mb-2">Despesas por categoria</div>
+        <canvas id="chartCategorias" height="250"></canvas>
+        <div id="emptyCategorias" class="text-muted small mt-2 d-none">Sem dados para exibir.</div>
+      </div>
+    </div>
+    <div class="col-md-7">
+      <div class="card p-3 h-100">
+        <div class="fw-semibold mb-2">Receitas vs Despesas (6 meses)</div>
+        <canvas id="chartFluxo" height="250"></canvas>
+        <div id="emptyFluxo" class="text-muted small mt-2 d-none">Sem dados para exibir.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de lançamentos -->
+  <h3 class="mt-5 mb-3">📋 Lançamentos Recentes</h3>
+  <table class="table table-bordered table-striped">
+    <thead class="table-light">
+      <tr>
+        <th>Data</th>
+        <th>Descrição</th>
+        <th>Valor</th>
+        <th>Tipo</th>
+        <th>Categoria</th>
+        <th>Ações</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for lanc in lancamentos %}
+      <tr>
+        <td>{{ lanc.data }}</td>
+        <td>{{ lanc.descricao }}</td>
+        <td>R$ {{ "%.2f"|format(lanc.valor) }}</td>
+        <td>{{ lanc.tipo }}</td>
+        <td>{{ lanc.categoria }}</td>
+        <td>
+          <a href="{{ url_for('editar', id=lanc.id) }}" class="btn btn-sm btn-outline-primary">Editar</a>
+          <a href="{{ url_for('excluir', id=lanc.id) }}" class="btn btn-sm btn-outline-danger">Excluir</a>
+        </td>
+      </tr>
+      {% else %}
+      <tr>
+        <td colspan="6" class="text-center">Nenhum lançamento encontrado.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+<hr>
+<h3 class="mt-5 mb-3">💡 Reserva Inteligente</h3>
+
+<form id="form-sugestao" class="card p-3 mb-4 shadow-sm border-success">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label">Saldo atual</label>
+      <input type="number" name="saldo_atual" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Meta desejada</label>
+      <input type="number" name="meta" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Renda mensal</label>
+      <input type="number" name="renda_mensal" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Aporte mensal desejado</label>
+      <input type="number" name="aporte_mensal" class="form-control" required>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Perfil de risco</label>
+      <select name="perfil" class="form-select">
+        <option value="conservador">Conservador</option>
+        <option value="moderado">Moderado</option>
+        <option value="arrojado">Arrojado</option>
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label">Prazo (em meses)</label>
+      <input type="number" name="prazo_meses" class="form-control" required>
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button type="submit" class="btn btn-success w-100">
+        <i class="bi bi-calculator me-1"></i>Simular
+      </button>
+    </div>
+  </div>
+</form>
+
+<!-- Painel de resultado -->
+<div id="resultado-sugestao" class="card border-success shadow p-4 mb-4" style="display:none;">
+  <!-- Conteúdo será preenchido dinamicamente via JavaScript -->
+</div>
+
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+  const fmt = (v) => (v ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  let pieChart = null;
+  let lineChart = null;
+
+  async function carregarCompetencias() {
+    const res = await fetch('/api/competencias');
+    const data = await res.json();
+    const sel = document.getElementById('filtroCompetencia');
+    (data.competencias || []).forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      sel.appendChild(opt);
+    });
+  }
+
+  async function carregarMetrics(competencia = '') {
+    const url = new URL('/api/metrics', window.location.origin);
+    if (competencia) url.searchParams.set('competencia', competencia);
+    const res = await fetch(url);
+    const data = await res.json();
+
+    document.getElementById('cardReceitas').textContent = fmt(data.totalReceitas);
+    document.getElementById('cardDespesas').textContent = fmt(data.totalDespesas);
+
+    const saldoEl = document.getElementById('cardSaldo');
+    const saldo = data.saldo ?? 0;
+    saldoEl.textContent = fmt(saldo);
+    saldoEl.classList.toggle('text-success', saldo >= 0);
+    saldoEl.classList.toggle('text-danger', saldo < 0);
+
+    document.getElementById('cardMeta').textContent = fmt(data.metaTotal);
+    const progresso = data.progressoMeta ?? 0;
+    document.getElementById('badgeMeta').textContent = `${progresso.toFixed(0)}%`;
+    const bar = document.getElementById('barMeta');
+    bar.style.width = `${progresso}%`;
+    bar.classList.remove('bg-success','bg-warning','bg-danger');
+    if (progresso < 60) bar.classList.add('bg-success');
+    else if (progresso < 100) bar.classList.add('bg-warning');
+    else bar.classList.add('bg-danger');
+
+    await carregarAlertaSaldo();
+  }
+
+  async function carregarAlertaSaldo() {
+    document.getElementById("painelResumo")?.querySelectorAll(".alert")?.forEach(el => el.remove());
+    
+    const res = await fetch('/api/metrics-ajustado');
+    const data = await res.json();
+
+    if (data.mostrarAlerta) {
+      const alerta = document.createElement("div");
+      alerta.className = "alert alert-danger";
+      alerta.innerHTML = `
+        <strong>Atenção:</strong>
+        ${data.saldoReal < 0
+          ? "Seu saldo está negativo. Reveja seus gastos e priorize despesas essenciais."
+          : "Seu saldo ajustado está negativo devido a parcelas futuras. Planeje com atenção para evitar imprevistos."}
+      `;
+      document.getElementById("painelResumo").prepend(alerta);
+    }
+
+    const saldoAjustado = document.createElement("div");
+    saldoAjustado.className = "text-muted small mt-2";
+    saldoAjustado.innerHTML = `Saldo ajustado: <strong>R$ ${data.saldoAjustado.toFixed(2)}</strong>`;
+    document.getElementById("cardSaldo").appendChild(saldoAjustado);
+  }
+
+  async function carregarDespesasPorCategoria(competencia = '') {
+    const url = new URL('/api/charts/despesas-por-categoria', window.location.origin);
+    if (competencia) url.searchParams.set('competencia', competencia);
+    const res = await fetch(url);
+    const { data } = await res.json();
+
+    const empty = document.getElementById('emptyCategorias');
+    const ctx = document.getElementById('chartCategorias').getContext('2d');
+
+    if (pieChart) pieChart.destroy();
+
+    if (!data || data.length === 0 || data.every(d => (d.total || 0) === 0)) {
+      empty.classList.remove('d-none');
+      pieChart = null;
+      return;
+    }
+    empty.classList.add('d-none');
+
+    const labels = data.map(d => d.categoria);
+    const values = data.map(d => d.total);
+    const colors = labels.map((_, i) => `hsl(${(i * 47) % 360} 70% 55%)`);
+
+    pieChart = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data: values,
+          backgroundColor: colors,
+          borderWidth: 0
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.label}: ${fmt(ctx.parsed)}`
+            }
+          }
+        },
+        cutout: '60%'
+      }
+    });
+  }
+
+  async function carregarFluxoMensal() {
+    const res = await fetch('/api/charts/fluxo-mensal');
+    const { labels = [], receitas = [], despesas = [] } = await res.json();
+
+    const empty = document.getElementById('emptyFluxo');
+    const ctx = document.getElementById('chartFluxo').getContext('2d');
+
+    if (lineChart) lineChart.destroy();
+
+    if ((!receitas || receitas.every(v => v === 0)) && (!despesas || despesas.every(v => v === 0))) {
+      empty.classList.remove('d-none');
+      lineChart = null;
+      return;
+    }
+    empty.classList.add('d-none');
+
+    lineChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Receitas',
+            data: receitas,
+            borderColor: 'rgb(25, 135, 84)',
+            backgroundColor: 'rgba(25, 135, 84, 0.15)',
+            tension: 0.3,
+            fill: true
+          },
+          {
+            label: 'Despesas',
+            data: despesas,
+            borderColor: 'rgb(220, 53, 69)',
+            backgroundColor: 'rgba(220, 53, 69, 0.15)',
+            tension: 0.4,
+            fill: true
+          }
+        ]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => `${ctx.dataset.label}: ${fmt(ctx.parsed.y)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            ticks: {
+              callback: (value) => (value ?? 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+            }
+          }
+        }
+      }
+    });
+  }
+
+  // Inicialização
+  carregarCompetencias();
+  carregarMetrics();
+  carregarDespesasPorCategoria();
+  carregarFluxoMensal();
+
+  // Filtro: Aplicar e Limpar
+  document.getElementById('btnAplicar').addEventListener('click', () => {
+    const competencia = document.getElementById('filtroCompetencia').value;
+    carregarMetrics(competencia);
+    carregarDespesasPorCategoria(competencia);
+  });
+
+  document.getElementById('btnLimpar').addEventListener('click', () => {
+    document.getElementById('filtroCompetencia').value = '';
+    carregarMetrics();
+    carregarDespesasPorCategoria();
+    carregarFluxoMensal();
+  });
+</script>
+
+
+<script>
+document.getElementById("form-sugestao").addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  const formData = new FormData(this);
+  const dados = Object.fromEntries(formData.entries());
+
+  try {
+    const resposta = await fetch("/api/sugestao_aplicacao", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(dados)
+    });
+
+    if (!resposta.ok) throw new Error("Erro na resposta da API");
+
+    const resultado = await resposta.json();
+
+    const divResultado = document.getElementById("resultado-sugestao");
+    divResultado.style.display = "block";
+    divResultado.innerHTML = `
+      <h5 class="mb-3 text-success">📊 Resultado da Simulação</h5>
+      <p><strong>Aporte mensal informado:</strong> R$ ${resultado.aporte_mensal.toFixed(2)}</p>
+      <p><strong>Opções recomendadas:</strong> ${resultado.opcoes.join(', ')}</p>
+      <p><strong>Projeção da reserva:</strong> ${resultado.projecao.map(v => `R$ ${v.toFixed(2)}`).join(' → ')}</p>
+      <p><strong>Status:</strong> ${resultado.alerta}</p>
+      ${resultado.alerta.includes("não será") ? `<p><strong>Aporte ideal para atingir a meta:</strong> R$ ${resultado.aporte_ideal.toFixed(2)}</p>` : ""}
+    `;
+  } catch (erro) {
+    console.error("Erro ao simular:", erro);
+    alert("Erro ao simular reserva. Verifique os dados e tente novamente.");
+  }
+});
+</script>
+
+<script>
+  fetch("/api/metrics-ajustado")
+    .then(res => res.json())
+    .then(data => {
+      if (data.mostrarAlerta) {
+        const alerta = document.createElement("div");
+        alerta.className = "alert alert-danger mt-3";
+        alerta.innerHTML = `
+          <strong>Atenção:</strong>
+          ${data.saldoReal < 0
+            ? "Seu saldo está negativo. Reveja seus gastos e priorize despesas essenciais."
+            : "Seu saldo ajustado está negativo devido a parcelas futuras. Planeje com atenção para evitar imprevistos."}
+        `;
+        document.getElementById("painelResumo").prepend(alerta);
+      }
+
+      // Opcional: mostrar saldo ajustado no painel
+      const saldoAjustado = document.createElement("div");
+      saldoAjustado.className = "mt-2 text-muted";
+      saldoAjustado.innerHTML = `Saldo ajustado: <strong>R$ ${data.saldoAjustado.toFixed(2)}</strong>`;
+      document.getElementById("painelResumo").appendChild(saldoAjustado);
+    });
+</script>
+
+
+{% endblock %}
+
+
+
+

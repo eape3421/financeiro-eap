@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Simulador de Reserva</title>
+</head>
+<body>
+    <h1>📈 Simulador de Reserva Financeira</h1>
+    <form method="POST">
+        Meta (R$): <input type="number" name="meta" step="0.01" required><br>
+        Aporte mensal (R$): <input type="number" name="aporte" step="0.01" required><br>
+        Prazo (meses): <input type="number" name="prazo" required><br>
+        Rendimento mensal (%): <input type="number" name="rendimento" step="0.01" value="0.3"><br>
+        <button type="submit">Simular</button>
+    </form>
+
+    {% if resultado %}
+        <h2>Resultado:</h2>
+        <p>Saldo final: R$ {{ resultado.final }}</p>
+        <p>{% if resultado.atingiu_meta %}✅ Meta atingida!{% else %}❌ Meta não atingida.{% endif %}</p>
+        <h3>Evolução mês a mês:</h3>
+        <ul>
+            {% for valor in resultado.historico %}
+                <li>R$ {{ valor }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</body>
+</html>

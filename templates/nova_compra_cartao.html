@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container mt-4">
+  <h2 class="mb-4"><i class="bi bi-credit-card me-2"></i>Nova Compra Parcelada</h2>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if ajuste_final %}
+    <div class="alert alert-warning mt-2">
+      A última parcela foi ajustada para garantir que o total seja exatamente R$ {{ valor_total | round(2) }}.
+    </div>
+  {% endif %}
+
+  <form method="POST" class="row g-3">
+    <div class="col-md-6">
+      <label for="descricao" class="form-label">Descrição</label>
+      <input type="text" class="form-control" id="descricao" name="descricao" placeholder="Ex: Notebook, TV, Celular..." required>
+    </div>
+
+    <div class="col-md-6">
+      <label for="cartao" class="form-label">Cartão</label>
+      <input type="text" class="form-control" id="cartao" name="cartao" placeholder="Ex: Nubank, Visa..." required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="valor_total" class="form-label">Valor Total (R$)</label>
+      <input type="number" step="0.01" class="form-control" id="valor_total" name="valor_total" required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="total_parcelas" class="form-label">Total de Parcelas</label>
+      <input type="number" class="form-control" id="total_parcelas" name="total_parcelas" min="1" required>
+    </div>
+
+    <div class="col-md-4">
+      <label for="data_primeira_fatura" class="form-label">Data da 1ª Fatura</label>
+      <input type="date" class="form-control" id="data_primeira_fatura" name="data_primeira_fatura" required>
+    </div>
+
+    <div class="col-12 text-end">
+      <button type="submit" class="btn btn-success" onclick="this.disabled=true; this.form.submit();">
+        <i class="bi bi-save me-1"></i>Salvar Compra
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+
+

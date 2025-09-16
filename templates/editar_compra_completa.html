@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Editar Compra Completa{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2><i class="bi bi-pencil-square me-2"></i>Editar Compra Completa</h2>
+
+  <form method="POST" action="{{ url_for('editar_compra_completa', id=compra.id) }}">
+    <div class="mb-3">
+      <label class="form-label">Nome da Compra</label>
+      <input type="text" name="descricao" class="form-control" value="{{ compra.descricao }}" required>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Cartão</label>
+      <input type="text" name="cartao" class="form-control" value="{{ compra.cartao | default('') }}">
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Total de Parcelas</label>
+      <input type="number" name="total_parcelas" class="form-control" value="{{ compra.total_parcelas | default('') }}">
+    </div>
+
+    <h4 class="mt-4">Parcelas</h4>
+    {% for p in compra.parcelas %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <strong>Parcela {{ p.numero }}</strong>
+        <div class="row">
+          <div class="col-md-4">
+            <label class="form-label">Valor</label>
+            <input type="number" step="0.01" name="valor_{{ p.id }}" class="form-control" value="{{ '%.2f' | format(p.valor) }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Vencimento</label>
+            <input type="date" name="vencimento_{{ p.id }}" class="form-control"
+                   value="{{ p.vencimento.strftime('%Y-%m-%d') if p.vencimento else '' }}">
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-save me-1"></i>Salvar alterações
+    </button>
+    <a href="{{ url_for('listar_parcelas') }}" class="btn btn-secondary ms-2">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

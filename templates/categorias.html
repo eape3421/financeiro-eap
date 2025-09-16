@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+  <h2 class="section-title">🏷️ Gerenciar Categorias</h2>
+  <form method="POST" class="card p-4 mb-4">
+    <div class="mb-3">
+      <label for="nome" class="form-label">Nome</label>
+      <input type="text" class="form-control" id="nome" name="nome" required>
+    </div>
+    <div class="mb-3">
+      <label for="tipo" class="form-label">Tipo</label>
+      <select class="form-select" id="tipo" name="tipo">
+        <option value="Receita">Receita</option>
+        <option value="Despesa">Despesa</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label for="meta" class="form-label">Meta mensal (opcional)</label>
+      <input type="number" class="form-control" id="meta" name="meta" step="0.01">
+    </div>
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-save me-1"></i> Salvar
+    </button>
+  </form>
+
+  <h3 class="section-title">📋 Lista de Categorias</h3>
+  {% if categorias %}
+    <ul class="list-group">
+      {% for c in categorias %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ c.nome }}</strong> <span class="text-muted">({{ c.tipo }})</span>
+          </div>
+          {% if c.meta %}
+            <span class="badge bg-info text-dark">Meta: R$ {{ "%.2f"|format(c.meta) }}</span>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="text-muted">Nenhuma categoria cadastrada ainda.</p>
+  {% endif %}
+
+  <a href="{{ url_for('index') }}" class="btn btn-outline-secondary mt-4">
+    <i class="bi bi-arrow-left me-1"></i> Voltar
+  </a>
+{% endblock %}
+

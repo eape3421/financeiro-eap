@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Parcelas do Cartão{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2><i class="bi bi-list-columns me-2"></i>Parcelas do Cartão</h2>
+
+  <!-- 🔍 Filtros -->
+  <form method="GET" class="row g-3 mb-4">
+    <div class="col-md-4">
+      <label for="mes" class="form-label">Filtrar por mês</label>
+      <input type="month" class="form-control" name="mes" id="mes" value="{{ mes or '' }}">
+    </div>
+    <div class="col-md-4">
+      <label for="cartao" class="form-label">Filtrar por cartão</label>
+      <input type="text" class="form-control" name="cartao" id="cartao" placeholder="Ex: Nubank" value="{{ cartao or '' }}">
+    </div>
+    <div class="col-md-4 d-flex align-items-end">
+      <button type="submit" class="btn btn-primary me-2">
+        <i class="bi bi-funnel-fill me-1"></i><span class="d-none d-md-inline">Filtrar</span>
+      </button>
+      <a href="{{ url_for('listar_parcelas') }}" class="btn btn-outline-secondary">
+        <span class="d-none d-md-inline">Limpar</span><i class="bi bi-x-circle ms-1"></i>
+      </a>
+    </div>
+  </form>
+
+  <!-- 📊 Resumo -->
+  {% if total_parcelas > 0 %}
+  <div class="alert alert-info d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ total_parcelas }}</strong> parcelas encontradas
+      {% if mes %}
+        para <strong>{{ mes|replace("-", "/") }}</strong>
+      {% endif %}
+      {% if cartao %}
+        no cartão <strong>{{ cartao }}</strong>
+      {% endif %}
+    </div>
+    <div>
+      Total: <strong>R$ {{ "%.2f"|format(total_valor) }}</strong>
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-warning">
+    Nenhuma parcela encontrada com os filtros aplicados.
+  </div>
+  {% endif %}
+
+  <!-- 📈 Gráfico -->
+  <div class="card mb-4">
+    <div class="card-body">
+      <h5 class="card-title"><i class="bi bi-bar-chart-line me-2"></i>Parcelas por Mês</h5>
+      <canvas id="graficoParcelas"></canvas>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    fetch("/api/parcelas-por-mes")
+      .then(res => res.json())
+      .then(data => {
+        const ctx = document.getElementById("graficoParcelas").getContext("2d");
+        new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: data.map(d => d.mes),
+            datasets: [{
+              label: "Total de Parcelas (R$)",
+              data: data.map(d => d.total),
+              backgroundColor: "#0d6efd"
+            }]
+          },
+          options: {
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      });
+  </script>
+
+  <!-- 📋 Tabela de parcelas -->
+  <table class="table table-bordered table-hover">
+    <thead class="table-primary">
+      <tr>
+        <th>Compra</th>
+        <th>Cartão</th>
+        <th>Parcela</th>
+        <th>Valor (R$)</th>
+        <th>Vencimento</th>
+        <th>Status</th>
+        <th>Ação</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% set compras_exibidas = [] %}
+      {% for p in parcelas %}
+      <tr>
+        <td>{{ p.compra.descricao }}</td>
+        <td>{{ p.compra.cartao or "Não informado" }}</td>
+        <td>{{ p.numero }}/{{ p.compra.total_parcelas }}</td>
+        <td>{{ "%.2f"|format(p.valor) }}</td>
+        <td>{{ p.vencimento.strftime('%d/%m/%Y') }}</td>
+        <td>
+          {% if p.paga %}
+            <span class="badge bg-success">Paga</span>
+          {% else %}
+            <span class="badge bg-warning text-dark">A vencer</span>
+          {% endif %}
+        </td>
+        <td>
+          <form method="POST" action="{{ url_for('toggle_parcela', parcela_id=p.id) }}" style="display:inline;">
+            {% if p.paga %}
+              <button type="submit" class="btn btn-sm btn-outline-secondary" title="Desfazer">
+                <i class="bi bi-arrow-counterclockwise"></i>
+                <span class="d-none d-md-inline"> Desfazer</span>
+              </button>
+            {% else %}
+              <button type="submit" class="btn btn-sm btn-success" title="Marcar paga">
+                <i class="bi bi-check2-circle"></i>
+                <span class="d-none d-md-inline"> Marcar paga</span>
+              </button>
+            {% endif %}
+          </form>
+
+          <a href="{{ url_for('editar_compra_completa', id=p.compra_id) }}" class="btn btn-sm btn-warning mt-1" title="Editar compra">
+            <i class="bi bi-pencil-square"></i>
+            <span class="d-none d-md-inline"> Editar</span>
+          </a>
+
+          {% if p.compra.id not in compras_exibidas %}
+            <form method="POST" action="{{ url_for('excluir_compra_cartao', compra_id=p.compra.id) }}" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-danger mt-1" onclick="return confirm('Tem certeza que deseja excluir esta compra e todas as parcelas?')" title="Excluir compra">
+                <i class="bi bi-trash"></i>
+                <span class="d-none d-md-inline"> Excluir</span>
+              </button>
+            </form>
+            {% set _ = compras_exibidas.append(p.compra.id) %}
+          {% endif %}
+        </td>
+      </tr>
+
+      <!-- 🔍 Diagnóstico: mostra tipo e ID -->
+      <tr>
+        <td colspan="7" style="font-size: 12px; color: gray;">
+          Parcela ID: {{ p.id }} | Compra ID via relacionamento: {{ p.compra.id }} | Compra ID direto: {{ p.compra_id }}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
