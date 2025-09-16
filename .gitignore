@@ -1,0 +1,23 @@
+# Ambiente virtual
+.venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Arquivos de sistema
+.env
+*.db
+
+# Pastas de build e distribuição
+build/
+dist/
+output/
+instance/
+
+# Arquivos de configuração do VSCode
+.vscode/
+
+# Arquivos temporários
+*.log
+*.spec
